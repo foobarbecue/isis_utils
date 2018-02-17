@@ -1,6 +1,9 @@
+#!/usr/bin/env python3
+
 from pysis.isis import camrange, campt, crop
 from pysis.exceptions import ProcessError
 import pvl
+from clize import run
 
 def crop_latlon(center_lat, center_lon, nsamples, nlines, cube_file, pad=None):
     center_campt = pvl.loads(campt(from_= cube_file, type="ground", latitude=center_lat, longitude=center_lon))
@@ -20,3 +23,5 @@ def crop_latlon(center_lat, center_lon, nsamples, nlines, cube_file, pad=None):
     except ProcessError as e:
         print(e.stderr, e.stdout)
 
+if __name__ == '__main__':
+    run(crop_latlon)
