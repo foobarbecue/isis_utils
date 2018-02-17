@@ -5,21 +5,23 @@ from pysis.exceptions import ProcessError
 import pvl
 from clize import run
 
-def crop_latlon(center_lat, center_lon, nsamples, nlines, cube_file, pad=None):
-    center_campt = pvl.loads(campt(from_= cube_file, type="ground", latitude=center_lat, longitude=center_lon))
-    # except ProcessError:
-    #     print("Error finding northwest corner. Is it outside the input cube?")
+def crop_latlon(*, center_lat:float, center_lon:float, nsamples:int, nlines:int, to_cube, from_cube, pad=None):
+    print('cropping {}'.format(from_cube))
+    try:
+        center_campt = pvl.loads(campt(from_= from_cube, type="ground", latitude=center_lat, longitude=center_lon))
+
+    except ProcessError as e:
+        print(e.stderr, e.stdout)
 
     center_pixel = (center_campt['GroundPoint']['Line'], center_campt['GroundPoint']['Sample'])
     nw_pixel = (center_pixel[0] - nlines / 2, center_pixel[1] - nsamples / 2)
-
     try:
-        crop(from_=cube_file,
+        crop(from_=from_cube,
              sample=int(nw_pixel[1]),
              line=int(nw_pixel[0]),
              nsamples=nsamples,
              nlines=nlines,
-             to="/home/aaron/test.cub")
+             to=to_cube)
     except ProcessError as e:
         print(e.stderr, e.stdout)
 
