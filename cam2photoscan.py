@@ -7,11 +7,14 @@ from clize import run
 from os import path
 from glob import glob
 
-ps_cam_xml_template = """
-<?xml version="1.0" encoding="UTF-8"?>
+ps_cam_xml_template = """<?xml version="1.0" encoding="UTF-8"?>
 <document version="1.3.0">
   <chunk>
     <sensors>
+        <sensor id="0" label="unknown" type="frame">
+        <resolution width="500" height="500"/>
+        <property name="fixed" value="0"/>
+      </sensor>
     </sensors>
     <cameras>
     {}
@@ -25,7 +28,8 @@ ps_cam_xml_template = """
 
 def camera_xml_snippet(position):
     cam_template = """
-    <camera id="2" label="{}" sensor_id="0" enabled="1">
+    <camera id="{}" label="{}" sensor_id="0" enabled="1">
+        <!-- <transform>0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1</transform> -->
         <orientation>1</orientation>
         <reference x="{}" y="{}" z="{}" enabled="1"/>
     </camera>
@@ -34,11 +38,12 @@ def camera_xml_snippet(position):
 
 def dir2photoscan_cameras(*, from_dir, lat, lon, to_file):
     positions = []
-    for cam_file in glob(from_dir + '*.cub'):
+    for id, cam_file in enumerate(glob(from_dir + '*.cub')):
         try:
             res = pvl.loads(campt(from_=path.join(from_dir, cam_file), type="ground", latitude=lat, longitude=lon))
             #positions.append([cam_file, res['GroundPoint']['SpacecraftPosition']])
-            positions.append([cam_file,
+            positions.append([id,
+                              path.split(cam_file)[-1]+'.tif',
                               res['GroundPoint']['SubSpacecraftLongitude'][0],
                               res['GroundPoint']['SubSpacecraftLatitude'][0],
                               res['GroundPoint']['SpacecraftAltitude'][0]
