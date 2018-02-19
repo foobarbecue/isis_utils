@@ -49,3 +49,6 @@ def dir2photoscan_cameras(*, from_dir, lat, lon, to_file):
     out_xml = ps_cam_xml_template.format(''.join([camera_xml_snippet(cam) for cam in positions]))
     with open(to_file, 'w') as outfile:
         outfile.write(out_xml)
+
+if __name__ == '__main__':
+    run(dir2photoscan_cameras)
