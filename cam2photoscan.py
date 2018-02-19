@@ -38,8 +38,7 @@ def camera_xml_snippet(id_, ground_point):
     </camera>
     """
     # Label from filename
-    label = path.split(ground_point['Filename'])[-1] + '.tif',
-
+    label = path.split(ground_point['Filename'])[-1] + '.tif'
     # Calculate Photoscan-compatible rotation matrix from look direction and body fixed position
     rot_mat = transforms3d.euler.euler2mat(*ground_point['LookDirectionBodyFixed'].value)
     translation_col = numpy.array(ground_point['BodyFixedCoordinate'].value).reshape(3,1)
