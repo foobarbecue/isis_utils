@@ -30,7 +30,6 @@ ps_cam_xml_template = """<?xml version="1.0" encoding="UTF-8"?>
     """
 
 def camera_xml_snippet(id_, ground_point):
-    print(id_)
     cam_template = """<camera id="{}" label="{}" sensor_id="1" enabled="1">
         <transform>{}</transform>
         <orientation>1</orientation>
@@ -39,9 +38,13 @@ def camera_xml_snippet(id_, ground_point):
     """
     # Label from filename
     label = path.split(ground_point['Filename'])[-1] + '.tif'
-    # Calculate Photoscan-compatible rotation matrix from look direction and body fixed position
+    # Calculate rotation matrix from look direction and body fixed position
     rot_mat = transforms3d.euler.euler2mat(*ground_point['LookDirectionBodyFixed'].value)
-    translation_col = numpy.array(ground_point['SpacecraftPosition'].value).reshape(3,1)
+
+    # Subtract the ground point location from the spacecraft position so we can work in small numbers
+    spacecraft_position = numpy.array(ground_point['SpacecraftPosition'].value)
+    ground_point_coords = numpy.array(ground_point['BodyFixedCoordinate'].value)
+    translation_col = (spacecraft_position - ground_point_coords).reshape(3,1)
     bottom_row = numpy.array([0,0,0,1])
     ps_transform = numpy.hstack([rot_mat, translation_col])
     ps_transform = numpy.vstack([ps_transform, bottom_row])
