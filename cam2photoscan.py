@@ -9,12 +9,13 @@ from glob import glob
 import transforms3d
 import numpy
 
+#TODO get resolution numbers from line / samples. PS ignores the cameras if resolution is wrong.
 ps_cam_xml_template = """<?xml version="1.0" encoding="UTF-8"?>
 <document version="1.3.0">
   <chunk>
     <sensors>
-        <sensor id="0" label="unknown" type="frame">
-        <resolution width="500" height="500"/>
+        <sensor id="1" label="unknown" type="frame">
+        <resolution width="1000" height="1000"/>
         <property name="fixed" value="0"/>
       </sensor>
     </sensors>
@@ -30,8 +31,7 @@ ps_cam_xml_template = """<?xml version="1.0" encoding="UTF-8"?>
 
 def camera_xml_snippet(id_, ground_point):
     print(id_)
-    cam_template = """
-    <camera id="{}" label="{}" sensor_id="0" enabled="1">
+    cam_template = """<camera id="{}" label="{}" sensor_id="1" enabled="1">
         <transform>{}</transform>
         <orientation>1</orientation>
         <reference x="{}" y="{}" z="{}" enabled="1"/>
@@ -41,7 +41,7 @@ def camera_xml_snippet(id_, ground_point):
     label = path.split(ground_point['Filename'])[-1] + '.tif'
     # Calculate Photoscan-compatible rotation matrix from look direction and body fixed position
     rot_mat = transforms3d.euler.euler2mat(*ground_point['LookDirectionBodyFixed'].value)
-    translation_col = numpy.array(ground_point['BodyFixedCoordinate'].value).reshape(3,1)
+    translation_col = numpy.array(ground_point['SpacecraftPosition'].value).reshape(3,1)
     bottom_row = numpy.array([0,0,0,1])
     ps_transform = numpy.hstack([rot_mat, translation_col])
     ps_transform = numpy.vstack([ps_transform, bottom_row])
@@ -70,7 +70,7 @@ def dir2photoscan_cameras(*, from_dir, lat, lon, to_file=None):
         with open(to_file, 'w') as outfile:
             outfile.write(out_xml)
     else:
-        return out_xml
+        return ground_points
 
 if __name__ == '__main__':
     run(dir2photoscan_cameras)
