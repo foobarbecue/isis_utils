@@ -5,7 +5,8 @@ from pysis.exceptions import ProcessError
 import pvl
 from clize import run
 
-def crop_latlon(*, center_lat:float, center_lon:float, nsamples:int, nlines:int, to_cube, from_cube, pad=None):
+def crop_latlon(*, center_lat:float, center_lon:float, nsamples:int, nlines:int, to_cube, from_cube, pad=None,
+                failed_list_to=None):
     print('cropping {}'.format(from_cube))
     try:
         center_campt = pvl.loads(campt(from_= from_cube, type="ground", latitude=center_lat, longitude=center_lon))
@@ -24,6 +25,9 @@ def crop_latlon(*, center_lat:float, center_lon:float, nsamples:int, nlines:int,
              to=to_cube)
     except ProcessError as e:
         print(e.stderr, e.stdout)
+        if failed_list_to:
+            with open(failed_list_to,'a') as failed_list:
+                failed_list.write(' {}, {} \n'.format(from_cube, e.stderr))
 
 if __name__ == '__main__':
     run(crop_latlon)
