@@ -53,7 +53,7 @@ def camera_xml_snippet(id_, ground_point):
     # Format lat lon alt info for Photoscan reference tag
     lat_lon_alt = [ground_point['SubSpacecraftLongitude'].value,
                    ground_point['SubSpacecraftLatitude'].value,
-                   ground_point['SpacecraftAltitude'].value]
+                   ground_point['SpacecraftAltitude'].value * 1000] # cmpt gives alt in km, Photoscan expects m
     return cam_template.format(id_, label, translation_str, *lat_lon_alt)
 
 def dir2photoscan_cameras(*, from_dir, lat, lon, to_file=None):
