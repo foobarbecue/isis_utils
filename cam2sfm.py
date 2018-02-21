@@ -29,9 +29,26 @@ ps_cam_xml_template = """<?xml version="1.0" encoding="UTF-8"?>
 </document>
     """
 
-def camera_xml_snippet(id_, ground_point):
-    cam_template = """<camera id="{}" label="{}" sensor_id="1" enabled="1">
-        <transform>{}</transform>
+xmp_cam_template = """<x:xmpmeta xmlns:x="adobe:ns:meta/">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+      <xcr:Position>{} {} {}</xcr:Position>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>"""
+
+
+def cam_xml_snippet(id_, ground_point):
+    """
+    :param id_:
+    :param ground_point: PVL output from USGS ISIS campt
+    :return: Photoscan-style camera xml file
+    """
+    cam_template_ypr = """<camera id="{}" label="{}" sensor_id="1" enabled="1">
+        <orientation>1</orientation>
+        <reference x="{}" y="{}" z="{}" yaw="{}" pitch="{}" roll="{}" enabled="1"/>
+    </camera>
+    """
+    cam_template_no_transf = """<camera id="{}" label="{}" sensor_id="1" enabled="1">
         <orientation>1</orientation>
         <reference x="{}" y="{}" z="{}" enabled="1"/>
     </camera>
@@ -54,20 +71,36 @@ def camera_xml_snippet(id_, ground_point):
     lat_lon_alt = [ground_point['SubSpacecraftLongitude'].value,
                    ground_point['SubSpacecraftLatitude'].value,
                    ground_point['SpacecraftAltitude'].value * 1000] # cmpt gives alt in km, Photoscan expects m
-    return cam_template.format(id_, label, translation_str, *lat_lon_alt)
+    yaw_pitch_roll = []
+    return cam_template_no_transf.format(id_, label, *lat_lon_alt)
 
-def dir2photoscan_cameras(*, from_dir, lat, lon, to_file=None):
+def cam_xmp(ground_point):
+    """
+    :param ground_point: PVL output from USGS ISIS campt
+    :return: RealityCapture-style camera xmp file
+    """
+
+    return xmp_cam_template.format(*ground_point['SpacecraftPosition'].value)
+
+def dir2sfm_cameras(*, from_dir, lat, lon, format='photoscan', to_file=None):
     ground_points = []
     for cam_file in glob(from_dir + '*.cub'):
+        cam_file_path = path.join(from_dir, cam_file)
         try:
             ground_point = pvl.loads(
-                campt(from_=path.join(from_dir, cam_file), type="ground", latitude=lat, longitude=lon))['GroundPoint']
-            #positions.append([cam_file, res['GroundPoint']['SpacecraftPosition']])
+                campt(from_=cam_file_path, type="ground", latitude=lat, longitude=lon))['GroundPoint']
+            # positions.append([cam_file, res['GroundPoint']['SpacecraftPosition']])
             ground_points.append(ground_point)
         except ProcessError as e:
             print(e.stderr)
-    cameras = ''.join([camera_xml_snippet(id_, ground_point) for id_, ground_point in enumerate(ground_points)])
-    out_xml = ps_cam_xml_template.format(cameras)
+
+        if format=='xmp':
+            with open(cam_file_path + '.xmp', 'w') as xmp_file:
+                xmp_file.write(cam_xmp(ground_point))
+
+    if format=='photoscan':
+        cameras = ''.join([cam_xml_snippet(id_, ground_point) for id_, ground_point in enumerate(ground_points)])
+        out_xml = ps_cam_xml_template.format(cameras)
 
     if to_file:
         with open(to_file, 'w') as outfile:
@@ -76,4 +109,4 @@ def dir2photoscan_cameras(*, from_dir, lat, lon, to_file=None):
         return ground_points
 
 if __name__ == '__main__':
-    run(dir2photoscan_cameras)
+    run(dir2sfm_cameras)
