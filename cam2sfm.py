@@ -33,6 +33,7 @@ xmp_cam_template = """<x:xmpmeta xmlns:x="adobe:ns:meta/">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
       <rdf:Description xcr:Version="2" xcr:PosePrior="locked"
        xmlns:xcr="http://www.capturingreality.com/ns/xcr/1.1#">
+      <xcr:Rotation>0 0 {} 0 0 {} 0 0 {}</xcr:Rotation>
       <xcr:Position>{} {} {}</xcr:Position>
     </rdf:Description>
   </rdf:RDF>
@@ -82,9 +83,9 @@ def cam_xmp(ground_point):
     :return: RealityCapture-style camera xmp file
     """
 
-    return xmp_cam_template.format(*ground_point['SpacecraftPosition'].value)
+    return xmp_cam_template.format(*ground_point['LookDirectionCamera'].value, *ground_point['SpacecraftPosition'].value)
 
-def dir2sfm_cameras(*, from_dir, lat, lon, format='photoscan', to_file=None, return_data=False):
+def dir2sfm_cameras(*, from_dir, lat, lon, out_format=None, to_file=None, return_data=False):
     ground_points = []
     for cam_file in glob(from_dir + '*.cub'):
         print(cam_file)
@@ -94,13 +95,13 @@ def dir2sfm_cameras(*, from_dir, lat, lon, format='photoscan', to_file=None, ret
                 campt(from_=cam_file_path, type="ground", latitude=lat, longitude=lon))['GroundPoint']
             # positions.append([cam_file, res['GroundPoint']['SpacecraftPosition']])
             ground_points.append(ground_point)
-            if format == 'xmp':
+            if out_format == 'xmp':
                 with open(cam_file_path + '.xmp', 'w') as xmp_file:
                     xmp_file.write(cam_xmp(ground_point))
         except ProcessError as e:
             print(e.stderr)
 
-    if format=='photoscan':
+    if out_format=='photoscan':
         cameras = ''.join([cam_xml_snippet(id_, ground_point) for id_, ground_point in enumerate(ground_points)])
         out_xml = ps_cam_xml_template.format(cameras)
 
