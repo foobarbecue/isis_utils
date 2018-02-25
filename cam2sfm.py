@@ -8,6 +8,7 @@ from os import path
 from glob import glob
 import transforms3d
 import numpy
+from math import radians
 
 #TODO get resolution numbers from line / samples. PS ignores the cameras if resolution is wrong.
 ps_cam_xml_template = """<?xml version="1.0" encoding="UTF-8"?>
@@ -39,6 +40,14 @@ xmp_cam_template = """<x:xmpmeta xmlns:x="adobe:ns:meta/">
   </rdf:RDF>
 </x:xmpmeta>"""
 
+xmp_cam_template_no_rot = """<x:xmpmeta xmlns:x="adobe:ns:meta/">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+      <rdf:Description xcr:Version="2" xcr:PosePrior="locked"
+       xmlns:xcr="http://www.capturingreality.com/ns/xcr/1.1#">
+      <xcr:Position>{} {} {}</xcr:Position>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>"""
 
 def cam_xml_snippet(id_, ground_point):
     """
@@ -46,12 +55,17 @@ def cam_xml_snippet(id_, ground_point):
     :param ground_point: PVL output from USGS ISIS campt
     :return: Photoscan-style camera xml file
     """
-    cam_template_ypr = """<camera id="{}" label="{}" sensor_id="1" enabled="1">
+    cam_template_mat = """<camera id="{}" label="{}" sensor_id="1" enabled="1">
         <orientation>1</orientation>
-        <reference x="{}" y="{}" z="{}" yaw="{}" pitch="{}" roll="{}" enabled="1"/>
+        <transform>{}</transform>
     </camera>
     """
-    cam_template_no_transf = """<camera id="{}" label="{}" sensor_id="1" enabled="1">
+    cam_template_xyzypr_ref = """<camera id="{}" label="{}" sensor_id="1" enabled="1">
+        <orientation>1</orientation>
+       <reference x="{}" y="{}" z="{}" yaw="{}" pitch="{}" roll="{}" enabled="1"/>
+    </camera>
+    """
+    cam_template_ref = """<camera id="{}" label="{}" sensor_id="1" enabled="1">
         <orientation>1</orientation>
         <reference x="{}" y="{}" z="{}" enabled="1"/>
     </camera>
@@ -59,7 +73,9 @@ def cam_xml_snippet(id_, ground_point):
     # Label from filename
     label = path.split(ground_point['Filename'])[-1] + '.tif'
     # Calculate rotation matrix from look direction and body fixed position
-    rot_mat = transforms3d.euler.euler2mat(*ground_point['LookDirectionBodyFixed'].value)
+    yaw = radians(ground_point['SpacecraftAzimuth'].value)
+    roll = radians(ground_point['OffNadirAngle'].value)
+    rot_mat = transforms3d.euler.euler2mat(0, yaw, radians(180) + roll, axes='rxzy')
 
     # Subtract the ground point location from the spacecraft position so we can work in small numbers
     spacecraft_position = numpy.array(ground_point['SpacecraftPosition'].value)
@@ -75,7 +91,7 @@ def cam_xml_snippet(id_, ground_point):
                    ground_point['SubSpacecraftLatitude'].value,
                    ground_point['SpacecraftAltitude'].value * 1000] # cmpt gives alt in km, Photoscan expects m
     yaw_pitch_roll = []
-    return cam_template_no_transf.format(id_, label, *lat_lon_alt)
+    return cam_template_mat.format(id_, label, translation_str)
 
 def cam_xmp(ground_point):
     """
@@ -83,7 +99,8 @@ def cam_xmp(ground_point):
     :return: RealityCapture-style camera xmp file
     """
 
-    return xmp_cam_template.format(*ground_point['LookDirectionCamera'].value, *ground_point['SpacecraftPosition'].value)
+    # return xmp_cam_template.format(*ground_point['LookDirectionCamera'].value, *ground_point['SpacecraftPosition'].value)
+    return xmp_cam_template_no_rot.format(*ground_point['SpacecraftPosition'].value)
 
 def dir2sfm_cameras(*, from_dir, lat, lon, out_format=None, to_file=None, return_data=False):
     ground_points = []
