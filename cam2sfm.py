@@ -110,11 +110,15 @@ def cam_csv(ground_points, to_file):
     :param ground_points: output from ISIS campt
     :return: csv of camera locations
     """
-    df = pandas.DataFrame(columns=['filename','x', 'y', 'z'], index='filename')
+    df = pandas.DataFrame(columns=['filename','x', 'y', 'z','SpacecraftAzimuth','OffNadirAngle',
+                                   'pointing_x','pointing_y','pointing_z'])
+    df.set_index('filename', inplace=True)
     for ground_point in ground_points:
-        name = ground_point['Filename']
+        name = path.split(ground_point['Filename'])[-1]
         pos = ground_point['SpacecraftPosition'].value
-        df.loc[name, :] = pos
+        rot = [ground_point['SpacecraftAzimuth'].value, ground_point['OffNadirAngle'].value]
+        pointing = ground_point['BodyFixedCoordinate'].value
+        df.loc[name, :] = pos + rot + pointing
     df.to_csv(to_file)
     return
 
