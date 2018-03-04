@@ -12,16 +12,19 @@ next(cam_data_reader) #skip header row
 for line in cam_data_reader:
     print(line['filename'])
     coords = [float(coord) for coord in [line['x'],line['y'],line['z']]]
-    SpacecraftAzimuth = float(line['SpacecraftAzimuth'])
+    NorthAzimuth = float(line['NorthAzimuth'])
     OffNadirAngle = float(line['OffNadirAngle'])
     #bpy.ops.object.camera_add(location=coords, rotation=[0,radians(OffNadirAngle),radians(SpacecraftAzimuth)])
     bpy.ops.object.camera_add(location=coords, rotation=[0,0,0])
     newcam = bpy.context.object
     newcam.name = line['filename']
+#    newcam.data.lens = 700.0
 
 #    bpy.ops.object.empty_add(location=pit_coords)
 #    pit = bpy.context.object
     bpy.ops.object.createcameraimageplane()
+    newimgplane = bpy.context.object
+    newimgplane.location.z = 0-float(line['SpacecraftAltitude'])
     mtlname = 'mat_imageplane_'+line['filename']
     mtl = bpy.data.materials[mtlname]
     imgtxture = mtl.node_tree.nodes['Image Texture']
@@ -39,5 +42,5 @@ for line in cam_data_reader:
     track_to.up_axis = 'UP_Y'
     track_to.use_target_z = True
     
-    look_dir.rotation_euler[1] = radians(SpacecraftAzimuth)
+    newimgplane.rotation_euler[2] = radians(NorthAzimuth-270)
     newcam.show_name = True

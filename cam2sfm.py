@@ -9,6 +9,7 @@ from glob import glob
 import transforms3d
 import numpy
 from math import radians
+import numpy
 import pandas
 
 #TODO get resolution numbers from line / samples. PS ignores the cameras if resolution is wrong.
@@ -58,7 +59,6 @@ def cam_xml_snippet(id_, ground_point):
     """
     cam_template_mat = """<camera id="{}" label="{}" sensor_id="1" enabled="1">
         <orientation>1</orientation>
-        <transform>{}</transform>
         <reference x="{}" y="{}" z="{}" enabled="1"/>
     </camera>
     """
@@ -93,7 +93,7 @@ def cam_xml_snippet(id_, ground_point):
                    ground_point['SubSpacecraftLatitude'].value,
                    ground_point['SpacecraftAltitude'].value * 1000] # cmpt gives alt in km, Photoscan expects m
     yaw_pitch_roll = [0, 0, 0]
-    return cam_template_mat.format(id_, label, translation_str, *lat_lon_alt)
+    return cam_template_mat.format(id_, label, *lat_lon_alt)
 
 def cam_xmp(ground_point):
     """
@@ -110,17 +110,22 @@ def cam_csv(ground_points, to_file):
     :param ground_points: output from ISIS campt
     :return: csv of camera locations
     """
-    df = pandas.DataFrame(columns=['filename','x', 'y', 'z','SpacecraftAzimuth','OffNadirAngle',
+    df = pandas.DataFrame(columns=['filename','x', 'y', 'z','NorthAzimuth','OffNadirAngle',
                                    'pointing_x','pointing_y','pointing_z',
-                                   'look_x','look_y','look_z'])
+                                   'look_x','look_y','look_z',
+                                   'SpacecraftAltitude',
+                                   'SunDir_x', 'SunDir_y', 'SunDir_z'])
     df.set_index('filename', inplace=True)
     for ground_point in ground_points:
         name = path.split(ground_point['Filename'])[-1]
-        pos = ground_point['SpacecraftPosition'].value
-        rot = [ground_point['SpacecraftAzimuth'].value, ground_point['OffNadirAngle'].value]
+        pos = [str(float(n)*1000) for n in ground_point['SpacecraftPosition'].value]
+        rot = [ground_point['NorthAzimuth'].value, ground_point['OffNadirAngle'].value]
         pointing = ground_point['BodyFixedCoordinate'].value
         look = ground_point['LookDirectionBodyFixed'].value
-        df.loc[name, :] = pos + rot + pointing + look
+        alt = str(float(ground_point['SpacecraftAltitude'].value) * 1000)
+        sun = numpy.array(ground_point['SunPosition'].value)
+        sun_direction_vector = sun / numpy.linalg.norm(sun, ord=1)
+        df.loc[name, :] = pos + rot + pointing + look + [alt] + sun_direction_vector.tolist()
     df.to_csv(to_file)
     return
 
